@@ -70,7 +70,7 @@ def run_training_loop(args):
         print(f"\n********** Iteration {itr} ************")
         # TODO: sample `args.batch_size` transitions using utils.sample_trajectories
         # make sure to use `max_ep_len`
-        trajs, envsteps_this_batch = None, None  # TODO
+        trajs, envsteps_this_batch = utils.sample_trajectories(env=env, policy=agent, min_timesteps_per_batch=args.batch_size, max_length=max_ep_len, render=False)  # TODO
         total_envsteps += envsteps_this_batch
 
         # trajs should be a list of dictionaries of NumPy arrays, where each dictionary corresponds to a trajectory.
@@ -122,6 +122,7 @@ def run_training_loop(args):
 
 def main():
     import argparse
+    import wandb
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--env_name", type=str, required=True)
@@ -180,6 +181,7 @@ def main():
     if not (os.path.exists(logdir)):
         os.makedirs(logdir)
 
+    wandb.init(project="cs285_2023_hw2", sync_tensorboard=True, name=args.exp_name)
     run_training_loop(args)
 
 

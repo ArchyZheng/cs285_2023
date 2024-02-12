@@ -6,6 +6,7 @@ from torch import optim
 import numpy as np
 import torch
 from torch import distributions
+from torch.distributions.distribution import Distribution
 
 from cs285.infrastructure import pytorch_util as ptu
 
@@ -59,11 +60,14 @@ class MLPPolicy(nn.Module):
     def get_action(self, obs: np.ndarray) -> np.ndarray:
         """Takes a single observation (as a numpy array) and returns a single action (as a numpy array)."""
         # TODO: implement get_action
-        action = None
+        obs_tensor = torch.from_numpy(obs).to(device=ptu.device)
+        action_distribution:Distribution = self.forward(obs_tensor)
+        action = action_distribution.sample()
+        action = action.detach().cpu().numpy()
 
         return action
 
-    def forward(self, obs: torch.FloatTensor):
+    def forward(self, obs: torch.FloatTensor) -> Distribution:
         """
         This function defines the forward pass of the network.  You can return anything you want, but you should be
         able to differentiate through it. For example, you can return a torch.FloatTensor. You can also return more
@@ -71,11 +75,11 @@ class MLPPolicy(nn.Module):
         """
         if self.discrete:
             # TODO: define the forward pass for a policy with a discrete action space.
-            pass
+            action_distribution:Distribution = distributions.Categorical(logits=self.logits_net(obs))
         else:
             # TODO: define the forward pass for a policy with a continuous action space.
-            pass
-        return None
+            action_distribution:Distribution = distributions.MultivariateNormal(loc=self.mean_net(obs), covariance_matrix=self.logstd)
+        return action_distribution
 
     def update(self, obs: np.ndarray, actions: np.ndarray, *args, **kwargs) -> dict:
         """Performs one iteration of gradient descent on the provided batch of data."""
