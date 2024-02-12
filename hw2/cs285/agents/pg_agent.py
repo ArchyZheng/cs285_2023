@@ -84,8 +84,8 @@ class PGAgent(nn.Module):
         # step 4: if needed, use all datapoints (s_t, a_t, q_t) to update the PG critic/baseline
         if self.critic is not None:
             # TODO: perform `self.baseline_gradient_steps` updates to the critic/baseline network
-            critic_info: dict = None
-
+            for _ in range(self.baseline_gradient_steps):
+                critic_info: dict = self.critic.update(obs=obs, q_values=q_values)
             info.update(critic_info)
 
         return info
@@ -105,7 +105,9 @@ class PGAgent(nn.Module):
             # Case 2: in reward-to-go PG, we only use the rewards after timestep t to estimate the Q-value for (s_t, a_t).
             # In other words: Q(s_t, a_t) = sum_{t'=t}^T gamma^(t'-t) * r_{t'}
             # TODO: use the helper function self._discounted_reward_to_go to calculate the Q-values
-            q_values = None
+            q_values = np.asarray([])
+            for reward in rewards:
+                q_values = np.append(q_values, self._discounted_reward_to_go(reward))
 
         return q_values
 
@@ -125,12 +127,15 @@ class PGAgent(nn.Module):
             advantages = q_values
         else:
             # TODO: run the critic and use it as a baseline
-            values = None
+            obs = torch.from_numpy(obs).to(device=ptu.device)
+            values = self.critic(obs)
+            values = values.squeeze(dim=1)
+            values = values.detach().cpu().numpy()
             assert values.shape == q_values.shape
 
             if self.gae_lambda is None:
                 # TODO: if using a baseline, but not GAE, what are the advantages?
-                advantages = None
+                advantages = q_values - values
             else:
                 # TODO: implement GAE
                 batch_size = obs.shape[0]
@@ -150,6 +155,9 @@ class PGAgent(nn.Module):
 
         # TODO: normalize the advantages to have a mean of zero and a standard deviation of one within the batch
         if self.normalize_advantages:
+            advantages_mean = np.mean(advantages)
+            advantages_std = np.std(advantages)
+            advantages = (advantages - advantages_mean) / (advantages_std + 1e-20)
             pass
 
         return advantages
@@ -174,5 +182,11 @@ class PGAgent(nn.Module):
         Helper function which takes a list of rewards {r_0, r_1, ..., r_t', ... r_T} and returns a list where the entry
         in each index t' is sum_{t'=t}^T gamma^(t'-t) * r_{t'}.
         """
-
-        return None
+        rewards_reverse = np.flip(rewards)
+        temp = 0
+        output = np.zeros_like(rewards)
+        for i, reward in enumerate(rewards_reverse):
+            temp *= self.gamma
+            temp += reward
+            output[i] = temp
+        return np.flip(output)

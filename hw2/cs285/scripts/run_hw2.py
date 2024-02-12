@@ -84,7 +84,7 @@ def run_training_loop(args):
             # save eval metrics
             print("\nCollecting data for eval...")
             eval_trajs, eval_envsteps_this_batch = utils.sample_trajectories(
-                env, agent.actor, args.eval_batch_size, max_ep_len, render=False
+                env, agent.actor, args.eval_batch_size, max_ep_len
             )
 
             logs = utils.compute_metrics(trajs, eval_trajs)
@@ -181,9 +181,9 @@ def main():
     if not (os.path.exists(logdir)):
         os.makedirs(logdir)
 
-    wandb.init(project="cs285_2023_hw2", sync_tensorboard=True, name=args.exp_name)
+    # wandb.init(project="cs285_2023_hw2", sync_tensorboard=True, name=args.exp_name)
     run_training_loop(args)
-    wandb.finish()
+    # wandb.finish()
 
 
 if __name__ == "__main__":
