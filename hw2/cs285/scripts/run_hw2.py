@@ -181,9 +181,9 @@ def main():
     if not (os.path.exists(logdir)):
         os.makedirs(logdir)
 
-    # wandb.init(project="cs285_2023_hw2", sync_tensorboard=True, name=args.exp_name)
+    wandb.init(project="cs285_2023_hw2", sync_tensorboard=True, name=args.exp_name)
     run_training_loop(args)
-    # wandb.finish()
+    wandb.finish()
 
 
 if __name__ == "__main__":
