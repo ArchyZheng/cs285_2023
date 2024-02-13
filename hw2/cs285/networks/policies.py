@@ -78,7 +78,7 @@ class MLPPolicy(nn.Module):
             action_distribution:Distribution = distributions.Categorical(logits=self.logits_net(obs))
         else:
             # TODO: define the forward pass for a policy with a continuous action space.
-            action_distribution:Distribution = distributions.MultivariateNormal(loc=self.mean_net(obs.float()), covariance_matrix=torch.diag(self.logstd.exp()))
+            action_distribution:Distribution = distributions.MultivariateNormal(loc=self.mean_net(obs.float()), scale_tril=torch.diag(self.logstd.exp()))
         return action_distribution
 
     def update(self, obs: np.ndarray, actions: np.ndarray, *args, **kwargs) -> dict:
