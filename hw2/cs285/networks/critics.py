@@ -34,6 +34,8 @@ class ValueCritic(nn.Module):
             learning_rate,
         )
 
+        self.criterion = torch.nn.MSELoss()
+
     def forward(self, obs: torch.Tensor) -> torch.Tensor:
         # TODO: implement the forward pass of the critic network
         return self.network(obs)
@@ -45,10 +47,9 @@ class ValueCritic(nn.Module):
         q_values = ptu.from_numpy(q_values)
 
         # TODO: update the critic using the observations and q_values
-        criterion = torch.nn.MSELoss()
         self.optimizer.zero_grad()
         prediction = self.forward(obs)
-        loss = criterion(prediction.squeeze(dim=1), q_values)
+        loss = self.criterion(prediction.squeeze(), q_values)
         loss.backward()
         self.optimizer.step()
 

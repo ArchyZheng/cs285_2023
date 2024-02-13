@@ -71,6 +71,7 @@ class PGAgent(nn.Module):
         actions: np.ndarray = np.concatenate(actions)
         rewards: np.ndarray = np.concatenate(rewards)
         terminals: np.ndarray = np.concatenate(terminals)
+        q_values: np.ndarray = np.concatenate(q_values)
 
         # step 2: calculate advantages from Q values
         advantages: np.ndarray = self._estimate_advantage(
@@ -98,16 +99,12 @@ class PGAgent(nn.Module):
             # trajectory at each point.
             # In other words: Q(s_t, a_t) = sum_{t'=0}^T gamma^t' r_{t'}
             # TODO: use the helper function self._discounted_return to calculate the Q-values
-            q_values = np.array([])
-            for reward in rewards:
-                q_values = np.append(q_values, self._discounted_return(reward))
+            q_values = [np.array(self._discounted_return(reward)) for reward in rewards]
         else:
             # Case 2: in reward-to-go PG, we only use the rewards after timestep t to estimate the Q-value for (s_t, a_t).
             # In other words: Q(s_t, a_t) = sum_{t'=t}^T gamma^(t'-t) * r_{t'}
             # TODO: use the helper function self._discounted_reward_to_go to calculate the Q-values
-            q_values = np.asarray([])
-            for reward in rewards:
-                q_values = np.append(q_values, self._discounted_reward_to_go(reward))
+            q_values = [np.array(self._discounted_reward_to_go(reward)) for reward in rewards]
 
         return q_values
 
@@ -127,10 +124,7 @@ class PGAgent(nn.Module):
             advantages = q_values
         else:
             # TODO: run the critic and use it as a baseline
-            obs = torch.from_numpy(obs).to(device=ptu.device)
-            values = self.critic(obs)
-            values = values.squeeze(dim=1)
-            values = values.detach().cpu().numpy()
+            values = ptu.to_numpy(self.critic(ptu.from_numpy(obs))).reshape(-1)
             assert values.shape == q_values.shape
 
             if self.gae_lambda is None:
@@ -188,5 +182,12 @@ class PGAgent(nn.Module):
         for i, reward in enumerate(rewards_reverse):
             temp *= self.gamma
             temp += reward
-            output[i] = temp
-        return np.flip(output)
+            output[-1 * i - 1] = temp
+        return output
+        # discounted_reward_to_go = 0.0
+        # discounted_rewards_to_go = []
+        # for i in range(len(rewards) - 1, -1, -1):
+        #     discounted_reward_to_go = discounted_reward_to_go * self.gamma + rewards[i]
+        #     discounted_rewards_to_go.append(discounted_reward_to_go)
+        # discounted_rewards_to_go.reverse()
+        # return list(discounted_rewards_to_go)
